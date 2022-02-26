@@ -15,43 +15,49 @@ namespace LinzNetzApi;
 public class LinzNetz : IAsyncDisposable {
     private Browser browser;
     private Page page;
+    private TimeSpan timeout;
 
     public BaseInfo BaseInfo { get; set; }
 
     private LinzNetz() { }
 
-    public static async Task<LinzNetz> StartSession(string username, string password) {
+    public static async Task<LinzNetz> StartSession(string username, string password, TimeSpan timeout, bool headless = true) {
         var ls = new LinzNetz();
-        await ls.Login(username, password);
+        ls.timeout = timeout;
+        await ls.Login(username, password, headless);
         return ls;
     }
 
-    private async Task<Browser> SetupBrowser() {
+    private async Task<Browser> SetupBrowser(bool headless) {
         await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
 
         Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions {
-            Headless = true
+            Headless = headless,
+            Timeout = (int)timeout.TotalMilliseconds
         });
         Console.WriteLine("Chrome ready");
         return browser;
     }
 
-    public async Task Login(string username, string password) {
-        browser = await SetupBrowser();
+    public async Task Login(string username, string password, bool headless) {
+        browser = await SetupBrowser(headless);
         page = await browser.NewPageAsync();
+        page.DefaultTimeout = (int)timeout.TotalMilliseconds;
+        await page.SetJavaScriptEnabledAsync(true);
         await NavigateToLogin(page);
         await Login(username, password, page);
         await NavigateToConsumption(page);
         BaseInfo = await ParseBaseInfo(page);
     }
 
-    public async Task<string[]> FetchConsumptionAsCsv(string dateFrom, string dateTo) {
+    public async Task<string> FetchConsumptionAsCsv(string dateFrom, string dateTo, string anlage) {
         DirectoryInfo downloadDir = SetupDownloads();
         await EnableFileDownloads(page, downloadDir);
-        await SelectQuarterHourResolution(page);
-        await SetFromDate(page, dateFrom);
-        await SetToDate(page, dateTo);
-        await LoadResults(page);
+        await SelectAnlage(page, anlage);
+        await SelectQuarterHourResolution(page); await page.WaitForTimeoutAsync(200);
+        await SetFromDate(page, dateFrom); await page.WaitForTimeoutAsync(200);
+        await SetToDate(page, dateTo); await page.WaitForTimeoutAsync(200);
+        await LoadResults(page); await page.WaitForTimeoutAsync(200);
         var csv = await ExportCsv(page, downloadDir);
         CleanupDownloads(downloadDir);
         return csv;
@@ -62,14 +68,13 @@ public class LinzNetz : IAsyncDisposable {
     }
 
     private static DirectoryInfo SetupDownloads() {
-        // download behavior
         var downloadDir = new DirectoryInfo("download");
-        if (downloadDir.Exists) downloadDir.Delete(true);
+        if (downloadDir.Exists) downloadDir.Delete(true); // clean up old files
         downloadDir.Create();
         return downloadDir;
     }
 
-    private async Task<string[]> ExportCsv(Page page, DirectoryInfo downloadDir) {
+    private async Task<string> ExportCsv(Page page, DirectoryInfo downloadDir) {
         // click export button
         var exportCsv = await FindElementByText(page, "span.netz-anchor-text", "CSV-Datei exportieren");
 
@@ -78,7 +83,6 @@ public class LinzNetz : IAsyncDisposable {
 
         var csv = await WaitForFileDownloadAsync(downloadDir);
         Console.WriteLine("export finished");
-        Console.WriteLine("len: " + csv.Length);
         return csv;
     }
 
@@ -95,24 +99,38 @@ public class LinzNetz : IAsyncDisposable {
     private async Task SelectQuarterHourResolution(Page page) {
         Console.WriteLine("Selecting Viertelstunden");
         await (await FindElementByText(page, "label", "Viertelstundenwerte")).ClickAsync();
+        await page.WaitForTimeoutAsync(500);
     }
 
+    private async Task SelectAnlage(Page page, string anlage) {
+        Console.WriteLine("Selecting anlage " + anlage);
+        await page.ClickAsync($"label[for={anlage}]");
+        await page.WaitForTimeoutAsync(500);
+    }
     private async Task SetFromDate(Page page, string date) {
         Console.WriteLine($"Setting fromdate to {date}");
-        await SetDate(page, date, @"myForm1\:calendarFromRegion");
+        await SetDate(page, date, @"myForm1\:calendarFromRegion", true);
     }
 
     private async Task SetToDate(Page page, string date) {
         Console.WriteLine($"Setting todate to {date}");
-        await SetDate(page, date, @"myForm1\:calendarToRegion");
+        await SetDate(page, date, @"myForm1\:calendarToRegion", true);
     }
 
-    private static async Task SetDate(Page page, string date, string id) {
+    private static async Task SetDate(Page page, string date, string id, bool disableJavascript) {
+        // disable some javascript needed to avoid weird value flickering
+        if (disableJavascript) await page.SetJavaScriptEnabledAsync(false);
+
         await page.FocusAsync($"#{id}");
-        await page.WaitForTimeoutAsync(100);
-        await page.EvaluateExpressionAsync(@$"document.getElementById('{id}').value = ''");
+        for (int i = 0; i < 10; i++) {
+            await page.Keyboard.PressAsync("Delete");
+        }
         await page.TypeAsync($"#{id}", date);
-        await page.WaitForTimeoutAsync(100);
+
+        if (disableJavascript) await page.SetJavaScriptEnabledAsync(true);
+
+        // trigger onblur event, otherwise date is not accepted
+        await page.EvaluateExpressionAsync($"document.getElementById('{id}').blur()");
     }
 
     public void PrintBaseInfo() {
@@ -166,14 +184,14 @@ public class LinzNetz : IAsyncDisposable {
         downloadDir.Delete(true);
     }
 
-    private static async Task<string[]> WaitForFileDownloadAsync(DirectoryInfo downloadDir) => await WaitForFileDownloadAsync(downloadDir, TimeSpan.FromSeconds(30));
+    private async Task<string> WaitForFileDownloadAsync(DirectoryInfo downloadDir) => await WaitForFileDownloadAsync(downloadDir, timeout);
 
-    private static async Task<string[]> WaitForFileDownloadAsync(DirectoryInfo downloadDir, TimeSpan timeout) {
+    private async Task<string> WaitForFileDownloadAsync(DirectoryInfo downloadDir, TimeSpan timeout) {
         var sw = Stopwatch.StartNew();
         while (sw.Elapsed < timeout) {
             if (downloadDir.GetFiles().Count() > 0) {
                 try {
-                    return await File.ReadAllLinesAsync(downloadDir.GetFiles().Single().FullName);
+                    return await File.ReadAllTextAsync(downloadDir.GetFiles().Single().FullName);
                 } catch (IOException) {
                     continue; // file is still being written
                 }
@@ -228,7 +246,8 @@ public class LinzNetz : IAsyncDisposable {
                     .Replace("</b>", "")
                     .Replace("<br>", "")
                     .Trim(),
-                zaehlPunktNummer: (await GetTextValueFromElement(row, "span.netz-word-break")).Trim()
+                zaehlPunktNummer: (await GetTextValueFromElement(row, "span.netz-word-break")).Trim(),
+                id: await (await (await row.QuerySelectorAsync("input.netz-radio")).GetPropertyAsync("id")).JsonValueAsync<string>()
             ));
         }
         return anlagen;
@@ -257,4 +276,4 @@ public class LinzNetz : IAsyncDisposable {
 }
 
 public record BaseInfo(string Address, List<Anlage> anlagen);
-public record Anlage(string name, string zaehlerNummer, string zaehlPunktNummer);
+public record Anlage(string name, string zaehlerNummer, string zaehlPunktNummer, string id);
