@@ -7,21 +7,33 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LinzStromFetcher;
+namespace LinzNetzApi;
 
-
-class LinzStrom {
+/// <summary>
+/// Logs in to services.linznetz.at
+/// </summary>
+public class LinzNetz : IAsyncDisposable {
     private Browser browser;
     private Page page;
 
     public BaseInfo BaseInfo { get; set; }
 
-    private LinzStrom() { }
+    private LinzNetz() { }
 
-    public static async Task<LinzStrom> StartSession(string username, string password) {
-        var ls = new LinzStrom();
+    public static async Task<LinzNetz> StartSession(string username, string password) {
+        var ls = new LinzNetz();
         await ls.Login(username, password);
         return ls;
+    }
+
+    private async Task<Browser> SetupBrowser() {
+        await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+
+        Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions {
+            Headless = true
+        });
+        Console.WriteLine("Chrome ready");
+        return browser;
     }
 
     public async Task Login(string username, string password) {
@@ -33,22 +45,19 @@ class LinzStrom {
         BaseInfo = await ParseBaseInfo(page);
     }
 
-    public async Task EndSession(string username, string password) {
-        await ShutdownBrowser(browser);
-    }
-
-
-    public async Task<string> FetchConsumptionAsCsv(string dateFrom, string dateTo) {
+    public async Task<string[]> FetchConsumptionAsCsv(string dateFrom, string dateTo) {
         DirectoryInfo downloadDir = SetupDownloads();
         await EnableFileDownloads(page, downloadDir);
         await SelectQuarterHourResolution(page);
+        await SetFromDate(page, dateFrom);
+        await SetToDate(page, dateTo);
         await LoadResults(page);
-        string csv = await ExportCsv(page, downloadDir);
+        var csv = await ExportCsv(page, downloadDir);
         CleanupDownloads(downloadDir);
         return csv;
     }
 
-    private static async Task ShutdownBrowser(Browser browser) {
+    private async Task ShutdownBrowser() {
         await browser.CloseAsync();
     }
 
@@ -60,7 +69,7 @@ class LinzStrom {
         return downloadDir;
     }
 
-    private async Task<string> ExportCsv(Page page, DirectoryInfo downloadDir) {
+    private async Task<string[]> ExportCsv(Page page, DirectoryInfo downloadDir) {
         // click export button
         var exportCsv = await FindElementByText(page, "span.netz-anchor-text", "CSV-Datei exportieren");
 
@@ -84,15 +93,31 @@ class LinzStrom {
     }
 
     private async Task SelectQuarterHourResolution(Page page) {
-        var viertels = await FindElementByText(page, "label", "Viertelstundenwerte");
-        Console.WriteLine(await GetTextValueFromElement2(viertels));
-
-        await viertels.ClickAsync();
+        Console.WriteLine("Selecting Viertelstunden");
+        await (await FindElementByText(page, "label", "Viertelstundenwerte")).ClickAsync();
     }
 
-    private static void PrintBaseInfo(BaseInfo baseInfo) {
-        Console.WriteLine(baseInfo);
-        foreach (var anlage in baseInfo.anlagen) {
+    private async Task SetFromDate(Page page, string date) {
+        Console.WriteLine($"Setting fromdate to {date}");
+        await SetDate(page, date, @"myForm1\:calendarFromRegion");
+    }
+
+    private async Task SetToDate(Page page, string date) {
+        Console.WriteLine($"Setting todate to {date}");
+        await SetDate(page, date, @"myForm1\:calendarToRegion");
+    }
+
+    private static async Task SetDate(Page page, string date, string id) {
+        await page.FocusAsync($"#{id}");
+        await page.WaitForTimeoutAsync(100);
+        await page.EvaluateExpressionAsync(@$"document.getElementById('{id}').value = ''");
+        await page.TypeAsync($"#{id}", date);
+        await page.WaitForTimeoutAsync(100);
+    }
+
+    public void PrintBaseInfo() {
+        Console.WriteLine(BaseInfo);
+        foreach (var anlage in BaseInfo.anlagen) {
             Console.WriteLine(anlage);
         }
     }
@@ -103,11 +128,9 @@ class LinzStrom {
         await page.WaitForSelectorAsync("#j_idt932");
         await page.ClickAsync("#j_idt932");
 
-        Console.WriteLine("click again!");
+        // click again
         await page.WaitForSelectorAsync("#j_idt932");
         await page.ClickAsync("#j_idt932");
-
-        Console.WriteLine("are we there yet?");
 
         await page.WaitForSelectorAsync("h1");
     }
@@ -138,31 +161,26 @@ class LinzStrom {
         await page.ClickAsync(".netz-login-link");
     }
 
-    private async Task<Browser> SetupBrowser() {
-        await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
-
-        Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions {
-            Headless = true
-        });
-        Console.WriteLine("Chrome ready");
-        return browser;
-    }
 
     private void CleanupDownloads(DirectoryInfo downloadDir) {
         downloadDir.Delete(true);
     }
 
-    private static async Task<string> WaitForFileDownloadAsync(DirectoryInfo downloadDir) => await WaitForFileDownloadAsync(downloadDir, TimeSpan.FromSeconds(30));
+    private static async Task<string[]> WaitForFileDownloadAsync(DirectoryInfo downloadDir) => await WaitForFileDownloadAsync(downloadDir, TimeSpan.FromSeconds(30));
 
-    private static async Task<string> WaitForFileDownloadAsync(DirectoryInfo downloadDir, TimeSpan timeout) {
+    private static async Task<string[]> WaitForFileDownloadAsync(DirectoryInfo downloadDir, TimeSpan timeout) {
         var sw = Stopwatch.StartNew();
         while (sw.Elapsed < timeout) {
             if (downloadDir.GetFiles().Count() > 0) {
-                break;
+                try {
+                    return await File.ReadAllLinesAsync(downloadDir.GetFiles().Single().FullName);
+                } catch (IOException) {
+                    continue; // file is still being written
+                }
             }
-            await Task.Delay(500);
+            await Task.Delay(200);
         }
-        return await File.ReadAllTextAsync(downloadDir.GetFiles().Single().FullName);
+        throw new Exception($"WaitForFileDownloadAsync: Could not read file within timeout of {timeout}");
     }
 
     private async Task EnableFileDownloads(Page page, DirectoryInfo downloadDir) {
@@ -232,7 +250,11 @@ class LinzStrom {
         var str = await content.JsonValueAsync<string>();
         return str;
     }
+
+    public async ValueTask DisposeAsync() {
+        await ShutdownBrowser();
+    }
 }
 
-record BaseInfo(string Address, List<Anlage> anlagen);
-record Anlage(string name, string zaehlerNummer, string zaehlPunktNummer);
+public record BaseInfo(string Address, List<Anlage> anlagen);
+public record Anlage(string name, string zaehlerNummer, string zaehlPunktNummer);

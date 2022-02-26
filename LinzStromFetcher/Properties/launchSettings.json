@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "LinzStromFetcher": {
+      "commandName": "Project",
+      "commandLineArgs": "-u \"c.neumueller@gmail.com\" -p \"O3VUZyCXWw58DU4d\" -f \"01.01.2015\""
+    }
+  }
+}
