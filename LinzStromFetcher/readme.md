@@ -12,7 +12,7 @@ Copyright (C) 2022 LinzNetzConsumptionFetcherConsole
 
   -u, --username          Linz Strom Username (e-mail).
   -p, --password          Linz Strom Password.
-  -d, --days              (Default: 7) default 7 days)
+  -d, --days              (Default: 7) default 7 days
   -e, --influxendpoint
   -k, --influxtoken
   --help                  Display this help screen.
