@@ -25,5 +25,6 @@ stages:
       inputs:
         command: build
         dockerfile: '$(Build.SourcesDirectory)/LinzNetzConsumptionToInfluxDb/Dockerfile'
+        buildContext: '$(Build.SourcesDirectory)'
         tags: |
           $(tag)
