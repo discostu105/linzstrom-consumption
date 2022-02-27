@@ -38,3 +38,4 @@ stages:
         buildContext: '$(Build.SourcesDirectory)'
         tags: |
           $(tag)
+          latest
