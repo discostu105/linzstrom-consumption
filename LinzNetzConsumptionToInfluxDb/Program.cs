@@ -11,10 +11,10 @@ public class Options {
 
     [Option('p', "password", Required = false, HelpText = "Linz Strom Password.")]
     public string Password { get; set; }
-    
+
     [Option('d', "days", Required = false, Default = 7, HelpText = "default 7 days")]
     public int Days { get; set; }
-    
+
 
     [Option('e', "influxendpoint", Required = false)]
     public string InfluxDbEndpoint { get; set; }
@@ -25,7 +25,7 @@ public class Options {
 
 class Program {
     public static async Task Main(string[] args) {
-        
+
         await Parser.Default.ParseArguments<Options>(args)
             .WithParsedAsync<Options>(async o => {
                 var configuration = new ConfigurationBuilder()
