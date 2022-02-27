@@ -18,8 +18,8 @@ login done!
 go to Verbrauchsdateninformation
 BaseInfo { Address = xxx, anlagen = xxx }
 Anlage { name = Basisanlage, zaehlerNummer = xxx, zaehlPunktNummer = AT003100000000000000000xxx, id = plant-41xxx }
-Anlage { name = Wärmepumpe Kombi, zaehlerNummer = xxx, zaehlPunktNummer = AT00310000000000xxx, id = plant-41xxx }
-Selecting anlage plant-41465
+Anlage { name = Wärmepumpe Kombi, zaehlerNummer = xxx, zaehlPunktNummer = AT00310000000000xxx, id = plant-41yyy }
+Selecting anlage plant-41xxx
 Selecting Viertelstunden
 Setting fromdate to 19.02.2022
 Setting todate to 27.02.2022
@@ -30,7 +30,7 @@ export finished
 writing 672 csv records
 first: 19 Feb 2022 00:00:00 19 Feb 2022 00:15:00 0,138
 last: 25 Feb 2022 23:45:00 26 Feb 2022 00:00:00 0,137
-Selecting anlage plant-41466
+Selecting anlage plant-41yyy
 Selecting Viertelstunden
 Setting fromdate to 19.02.2022
 Setting todate to 27.02.2022
