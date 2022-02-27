@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CsvUtil\CsvUtil.csproj" />
+    <ProjectReference Include="..\LinzNetzCsvUtil\LinzNetzCsvUtil.csproj" />
   </ItemGroup>
 
 </Project>

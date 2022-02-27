@@ -6,7 +6,7 @@ It uses a headless Chrome to log in and download consumption data as CSV for all
 
 The data can be directly inserted into an InfluxDb as measurements.
 
-If you want to try, use the LinzStromFetcher.
+If you want to try, use the `LinzNetzConsumptionToInfluxDb` app.
 
 To get the picture, here is an output log:
 ```
