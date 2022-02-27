@@ -29,11 +29,16 @@ public class LinzNetz : IAsyncDisposable {
     }
 
     private async Task<Browser> SetupBrowser(bool headless) {
-        await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+        if (Environment.GetEnvironmentVariable("PUPPETEER_EXECUTABLE_PATH") != null) {
+            // in docker environment, browser needs to be present already
+            // in non-docker environment, download the browser
+            await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+        }
 
         Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions {
             Headless = headless,
-            Timeout = (int)timeout.TotalMilliseconds
+            Timeout = (int)timeout.TotalMilliseconds,
+            Args = new string[] { "--disable-gpu", "--no-sandbox" }
         });
         Console.WriteLine("Chrome ready");
         return browser;
