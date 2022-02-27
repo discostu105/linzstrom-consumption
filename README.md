@@ -1,4 +1,4 @@
-# linzstrom-consumption
+# Linz AG, Linz Netz Verbrauchsdaten
 
 This project aims at automatically getting power consumption information from Linz Strom AG (https://services.linznetz.at/verbrauchsdateninformation).
 
@@ -45,3 +45,7 @@ last: 25 Feb 2022 23:45:00 26 Feb 2022 00:00:00 0,236
 
 Grafana Example:
 ![image](https://user-images.githubusercontent.com/10918780/155862787-4891b856-121e-4694-b148-9c169c0c2a34.png)
+
+## Disclaimer
+
+Of course this is very fragile, as every UI change from LINZ AG would break functionality of this crawler. If someone from LINZ AG reads this: A REST API would be very much appreciated and much easier to consume :).
