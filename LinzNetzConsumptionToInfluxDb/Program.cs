@@ -12,7 +12,7 @@ public class Options {
     [Option('p', "password", Required = false, HelpText = "Linz Strom Password.")]
     public string Password { get; set; }
     
-    [Option('d', "days", Required = false, Default = 7, HelpText = "default 7 days)")]
+    [Option('d', "days", Required = false, Default = 7, HelpText = "default 7 days")]
     public int Days { get; set; }
     
 

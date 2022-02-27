@@ -6,15 +6,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>735616c1-b91e-43e4-a351-fc96071e0397</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.14.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ConsumptionStorageInfluxDb\ConsumptionStorageInfluxDb.csproj" />
+    <ProjectReference Include="..\InfluxDbUtil\InfluxDbUtil.csproj" />
     <ProjectReference Include="..\LinzNetzApi\LinzNetzApi.csproj" />
   </ItemGroup>
 

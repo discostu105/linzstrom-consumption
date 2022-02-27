@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "LinzStromFetcher": {
-      "commandName": "Project",
-      "commandLineArgs": "-d 30"
-    }
-  }
-}

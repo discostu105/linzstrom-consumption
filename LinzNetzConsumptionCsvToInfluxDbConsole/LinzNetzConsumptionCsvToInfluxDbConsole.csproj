@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ConsumptionStorageInfluxDb\ConsumptionStorageInfluxDb.csproj" />
-    <ProjectReference Include="..\CsvUtil\CsvUtil.csproj" />
+    <ProjectReference Include="..\InfluxDbUtil\InfluxDbUtil.csproj" />
+    <ProjectReference Include="..\LinzNetzCsvUtil\LinzNetzCsvUtil.csproj" />
   </ItemGroup>
 
 </Project>
