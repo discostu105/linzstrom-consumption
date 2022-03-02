@@ -1,6 +1,6 @@
 # Linz AG, Linz Netz Verbrauchsdaten
 
-This project aims at automatically getting power consumption information from Linz Strom AG (https://services.linznetz.at/verbrauchsdateninformation).
+This project aims at automatically getting power consumption information from Linz Strom AG ("Verbrauchsdateninformation" from https://services.linznetz.at/).
 
 It uses a headless Chrome to log in and download consumption data as CSV for all appliances.
 
