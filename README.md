@@ -27,7 +27,7 @@ spec:
             image: docker.io/discostu105/linznetzconsumptiontoinfluxdb:20220227134744 # https://hub.docker.com/r/discostu105/linznetzconsumptiontoinfluxdb/tags
             imagePullPolicy: IfNotPresent
             command: ["dotnet"]
-            args: ["LinzNetzConsumptionToInfluxDb.dll", "--days", "3", "--username", "xxx@gmail.com", "--password", "***.", "--influxendpoint", "http://influxdb.home", "--influxtoken", "***"]
+            args: ["LinzNetzConsumptionToInfluxDb.dll", "--days", "3", "--username", "xxx@gmail.com", "--password", "***", "--influxendpoint", "http://influxdb:8086", "--influxtoken", "***"]
           restartPolicy: Never
           nodeSelector:
             kubernetes.io/arch: amd64
