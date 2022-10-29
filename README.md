@@ -1,6 +1,6 @@
 # Linz AG, Linz Netz Verbrauchsdaten
 
-This project aims at automatically getting power consumption information from Linz Strom AG (https://services.linznetz.at/verbrauchsdateninformation).
+This project aims at automatically getting power consumption information from Linz Strom AG ("Verbrauchsdateninformation" from https://services.linznetz.at/).
 
 It uses a headless Chrome to log in and download consumption data as CSV for all appliances.
 
@@ -8,7 +8,33 @@ The data can be directly inserted into an InfluxDb as measurements.
 
 If you want to try, use the `LinzNetzConsumptionToInfluxDb` app.
 
-To get the picture, here is an output log:
+## Run in Kubernetes
+
+CronJob example
+```
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: linzstrom
+spec:
+  schedule: "0 * * * *" # every hour
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: linzstrom
+            image: docker.io/discostu105/linznetzconsumptiontoinfluxdb:20220227134744 # https://hub.docker.com/r/discostu105/linznetzconsumptiontoinfluxdb/tags
+            imagePullPolicy: IfNotPresent
+            command: ["dotnet"]
+            args: ["LinzNetzConsumptionToInfluxDb.dll", "--days", "3", "--username", "xxx@gmail.com", "--password", "***", "--influxendpoint", "http://influxdb:8086", "--influxtoken", "***"]
+          restartPolicy: Never
+          nodeSelector:
+            kubernetes.io/arch: amd64
+      backoffLimit: 3
+```
+
+Example output log:
 ```
 Chrome ready
 go to login page
@@ -18,7 +44,7 @@ login done!
 go to Verbrauchsdateninformation
 BaseInfo { Address = xxx, anlagen = xxx }
 Anlage { name = Basisanlage, zaehlerNummer = xxx, zaehlPunktNummer = AT003100000000000000000xxx, id = plant-41xxx }
-Anlage { name = Wärmepumpe Kombi, zaehlerNummer = xxx, zaehlPunktNummer = AT00310000000000xxx, id = plant-41yyy }
+Anlage { name = Wärmepumpe Kombi, zaehlerNummer = yyy, zaehlPunktNummer = AT0031000000000000000yyy, id = plant-41yyy }
 Selecting anlage plant-41xxx
 Selecting Viertelstunden
 Setting fromdate to 19.02.2022
