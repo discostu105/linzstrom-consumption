@@ -148,14 +148,41 @@ public class LinzNetz : IAsyncDisposable {
     private static async Task NavigateToConsumption(Page page) {
         Console.WriteLine("go to Verbrauchsdateninformation");
         // go to Verbrauchsdateninformation:
-        await page.WaitForSelectorAsync("#j_idt932");
-        await page.ClickAsync("#j_idt932");
+        var options = new WaitForSelectorOptions() {
+            Timeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds
+        };
+        try {
+            // Link "Verbrauchsdateninformation"
+            if (!await TryClickLinks(page, options, new string[] { "#j_idt986", "#j_idt980" })) {
+                throw new Exception("Could not find link");
+            }
 
-        // click again
-        await page.WaitForSelectorAsync("#j_idt932");
-        await page.ClickAsync("#j_idt932");
+            // Link "Zur Verbrauchsdateninformation"
+            if (!await TryClickLinks(page, options, new string[] { "#j_idt986", "#j_idt980" })) {
+                throw new Exception("Could not find link");
+            }
 
-        await page.WaitForSelectorAsync("h1");
+            await page.WaitForSelectorAsync("h1");
+        } catch (Exception e) {
+            Console.WriteLine(e);
+            Console.WriteLine(await page.GetContentAsync());
+        }
+    }
+
+    private static async Task<bool> TryClickLinks(Page page, WaitForSelectorOptions options, string[] linkIds) {
+        foreach (var id in linkIds) {
+            try {
+                Console.WriteLine($"Trying link with id {id}.");
+                await page.WaitForSelectorAsync(id, options);
+                Console.WriteLine($"Link with id {id} successful.");
+                await page.ClickAsync(id);
+                return true;
+            } catch (Exception e) {
+                Console.WriteLine($"Link with {id} not found");
+                continue;
+            }
+        }
+        return false;
     }
 
     private static async Task Login(string username, string password, Page page) {
@@ -163,6 +190,7 @@ public class LinzNetz : IAsyncDisposable {
 
         await page.WaitForSelectorAsync("#username");
         await page.FocusAsync("#username");
+        Thread.Sleep(100); // this increases success rate
         await page.Keyboard.TypeAsync(username);
 
         await page.WaitForSelectorAsync("#password");
