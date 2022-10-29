@@ -14,8 +14,8 @@ public class KwhQuarterHourMeasurement {
     public string _03 { get; set; }
     public string _04 { get; set; }
 
-    public DateTime Timestamp_From => DateTime.Parse(_01);
-    public DateTime Timestamp_To => DateTime.Parse(_02);
+    public DateTime Timestamp_From => DateTime.ParseExact(_01, "dd.MM.yyyy HH:mm", null);
+    public DateTime Timestamp_To => DateTime.ParseExact(_02, "dd.MM.yyyy HH:mm", null);
     public decimal KWh => decimal.Parse(_03.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture);
     public decimal? ReplacementKwh => string.IsNullOrEmpty(_04) ? null : decimal.Parse(_04.Replace(",", "."), NumberStyles.Any, CultureInfo.InvariantCulture);
 
