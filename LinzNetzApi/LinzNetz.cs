@@ -153,12 +153,12 @@ public class LinzNetz : IAsyncDisposable {
         };
         try {
             // Link "Verbrauchsdateninformation"
-            if (!await TryClickLinks(page, options, new string[] { "#j_idt986", "#j_idt980" })) {
+            if (!await TryClickLink(page, options, "//a[contains(., 'Verbrauchsdateninformation')]")) {
                 throw new Exception("Could not find link");
             }
 
             // Link "Zur Verbrauchsdateninformation"
-            if (!await TryClickLinks(page, options, new string[] { "#j_idt986", "#j_idt980" })) {
+            if (!await TryClickLink(page, options, "//a[contains(., 'Zur Verbrauchsdateninformation')]" )) {
                 throw new Exception("Could not find link");
             }
 
@@ -169,20 +169,17 @@ public class LinzNetz : IAsyncDisposable {
         }
     }
 
-    private static async Task<bool> TryClickLinks(Page page, WaitForSelectorOptions options, string[] linkIds) {
-        foreach (var id in linkIds) {
-            try {
-                Console.WriteLine($"Trying link with id {id}.");
-                await page.WaitForSelectorAsync(id, options);
-                Console.WriteLine($"Link with id {id} successful.");
-                await page.ClickAsync(id);
-                return true;
-            } catch (Exception e) {
-                Console.WriteLine($"Link with {id} not found");
-                continue;
-            }
+    private static async Task<bool> TryClickLink(Page page, WaitForSelectorOptions options, string xpath) {
+        try {
+            Console.WriteLine($"Trying link with id {xpath}.");
+            var link = await page.WaitForXPathAsync(xpath, options);
+            Console.WriteLine($"Link with id {xpath} successful.");
+            await link.ClickAsync();
+            return true;
+        } catch (Exception e) {
+            Console.WriteLine($"Link with {xpath} not found");
+            return false;
         }
-        return false;
     }
 
     private static async Task Login(string username, string password, Page page) {
