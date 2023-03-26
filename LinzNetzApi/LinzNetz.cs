@@ -269,7 +269,7 @@ public class LinzNetz : IAsyncDisposable {
         var rows = await page.QuerySelectorAllAsync("#myform .netz-fieldset-inner .row");
         foreach (var row in rows) {
             anlagen.Add(new Anlage(
-                name: (await GetTextValueFromElement(row, ".netz-label-radio b")).Trim(),
+                name: (await GetTextValueFromElement(row, ".netz-label-radio b span")).Trim(),
                 zaehlerNummer: (await GetTextValueFromElement(row, "div:nth-child(3) > div"))
                     .Replace("<b>", "")
                     .Replace("Zählernummer:", "")
@@ -305,5 +305,9 @@ public class LinzNetz : IAsyncDisposable {
     }
 }
 
-public record BaseInfo(string Address, List<Anlage> anlagen);
+public record BaseInfo(string Address, List<Anlage> anlagen) {
+    public override string ToString() {
+        return $"Adress = {Address}, Anlagen = [ {string.Join(", ", anlagen)} ]";
+    }
+}
 public record Anlage(string name, string zaehlerNummer, string zaehlPunktNummer, string id);
