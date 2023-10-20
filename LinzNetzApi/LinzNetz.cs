@@ -13,8 +13,8 @@ namespace LinzNetzApi;
 /// Logs in to services.linznetz.at
 /// </summary>
 public class LinzNetz : IAsyncDisposable {
-    private Browser browser;
-    private Page page;
+    private IBrowser browser;
+    private IPage page;
     private TimeSpan timeout;
 
     public BaseInfo BaseInfo { get; set; }
@@ -28,14 +28,14 @@ public class LinzNetz : IAsyncDisposable {
         return ls;
     }
 
-    private async Task<Browser> SetupBrowser(bool headless) {
+    private async Task<IBrowser> SetupBrowser(bool headless) {
         if (Environment.GetEnvironmentVariable("PUPPETEER_EXECUTABLE_PATH") != null) {
             // in docker environment, browser needs to be present already
             // in non-docker environment, download the browser
-            await new BrowserFetcher().DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+            await new BrowserFetcher().DownloadAsync();
         }
-
-        Browser browser = await Puppeteer.LaunchAsync(new LaunchOptions {
+        
+        IBrowser browser = await Puppeteer.LaunchAsync(new LaunchOptions {
             Headless = headless,
             Timeout = (int)timeout.TotalMilliseconds,
             Args = new string[] { "--disable-gpu", "--no-sandbox" }
@@ -79,7 +79,7 @@ public class LinzNetz : IAsyncDisposable {
         return downloadDir;
     }
 
-    private async Task<string> ExportCsv(Page page, DirectoryInfo downloadDir) {
+    private async Task<string> ExportCsv(IPage page, DirectoryInfo downloadDir) {
         // click export button
         var exportCsv = await FindElementByText(page, "span.netz-anchor-text", "CSV-Datei exportieren");
 
@@ -91,7 +91,7 @@ public class LinzNetz : IAsyncDisposable {
         return csv;
     }
 
-    private static async Task LoadResults(Page page) {
+    private static async Task LoadResults(IPage page) {
         // click Anzeigen
         Console.WriteLine("load table");
         await page.ClickAsync(@"#myForm1\:btnIdA1");
@@ -101,28 +101,28 @@ public class LinzNetz : IAsyncDisposable {
         Console.WriteLine("table load finished");
     }
 
-    private async Task SelectQuarterHourResolution(Page page) {
+    private async Task SelectQuarterHourResolution(IPage page) {
         Console.WriteLine("Selecting Viertelstunden");
         await (await FindElementByText(page, "label", "Viertelstundenwerte")).ClickAsync();
         await page.WaitForTimeoutAsync(500);
     }
 
-    private async Task SelectAnlage(Page page, string anlage) {
+    private async Task SelectAnlage(IPage page, string anlage) {
         Console.WriteLine("Selecting anlage " + anlage);
         await page.ClickAsync($"label[for={anlage}]");
         await page.WaitForTimeoutAsync(500);
     }
-    private async Task SetFromDate(Page page, string date) {
+    private async Task SetFromDate(IPage page, string date) {
         Console.WriteLine($"Setting fromdate to {date}");
         await SetDate(page, date, @"myForm1\:calendarFromRegion", true);
     }
 
-    private async Task SetToDate(Page page, string date) {
+    private async Task SetToDate(IPage page, string date) {
         Console.WriteLine($"Setting todate to {date}");
         await SetDate(page, date, @"myForm1\:calendarToRegion", true);
     }
 
-    private static async Task SetDate(Page page, string date, string id, bool disableJavascript) {
+    private static async Task SetDate(IPage page, string date, string id, bool disableJavascript) {
         // disable some javascript needed to avoid weird value flickering
         if (disableJavascript) await page.SetJavaScriptEnabledAsync(false);
 
@@ -145,7 +145,7 @@ public class LinzNetz : IAsyncDisposable {
         }
     }
 
-    private static async Task NavigateToConsumption(Page page) {
+    private static async Task NavigateToConsumption(IPage page) {
         Console.WriteLine("go to Verbrauchsdateninformation");
         // go to Verbrauchsdateninformation:
         var options = new WaitForSelectorOptions() {
@@ -166,10 +166,11 @@ public class LinzNetz : IAsyncDisposable {
         } catch (Exception e) {
             Console.WriteLine(e);
             Console.WriteLine(await page.GetContentAsync());
+            throw;
         }
     }
 
-    private static async Task<bool> TryClickLink(Page page, WaitForSelectorOptions options, string xpath) {
+    private static async Task<bool> TryClickLink(IPage page, WaitForSelectorOptions options, string xpath) {
         try {
             Console.WriteLine($"Trying link with id {xpath}.");
             var link = await page.WaitForXPathAsync(xpath, options);
@@ -182,7 +183,7 @@ public class LinzNetz : IAsyncDisposable {
         }
     }
 
-    private static async Task Login(string username, string password, Page page) {
+    private static async Task Login(string username, string password, IPage page) {
         Console.WriteLine("enter credentials");
 
         await page.WaitForSelectorAsync("#username");
@@ -201,7 +202,7 @@ public class LinzNetz : IAsyncDisposable {
         Console.WriteLine("login done!");
     }
 
-    private static async Task NavigateToLogin(Page page) {
+    private static async Task NavigateToLogin(IPage page) {
         await page.GoToAsync("https://www.linznetz.at/portal/de/home");
         Console.WriteLine("go to login page");
 
@@ -231,7 +232,7 @@ public class LinzNetz : IAsyncDisposable {
         throw new Exception($"WaitForFileDownloadAsync: Could not read file within timeout of {timeout}");
     }
 
-    private async Task EnableFileDownloads(Page page, DirectoryInfo downloadDir) {
+    private async Task EnableFileDownloads(IPage page, DirectoryInfo downloadDir) {
         var clientProp = page.GetType().GetTypeInfo().GetDeclaredProperty("Client");
         var client = clientProp.GetValue(page) as CDPSession;
         var m = client.GetType().GetTypeInfo().GetDeclaredMethods("SendAsync").ElementAt(1) as MethodInfo;
@@ -245,7 +246,7 @@ public class LinzNetz : IAsyncDisposable {
         });
     }
 
-    async Task<ElementHandle> FindElementByText(Page page, string selector, string search) {
+    async Task<IElementHandle> FindElementByText(IPage page, string selector, string search) {
         var labels = await page.QuerySelectorAllAsync(selector);
         foreach (var label in labels) {
             var text = await GetTextValueFromElement2(label);
@@ -256,7 +257,7 @@ public class LinzNetz : IAsyncDisposable {
         throw new Exception("element not found: " + selector + ", " + search);
     }
 
-    async Task<BaseInfo> ParseBaseInfo(Page page) {
+    async Task<BaseInfo> ParseBaseInfo(IPage page) {
         var selector = "#myform > fieldset > legend";
         string str = await GetTextValue(page, selector);
         return new BaseInfo(
@@ -264,7 +265,7 @@ public class LinzNetz : IAsyncDisposable {
             await GetAnlagen(page));
     }
 
-    async Task<List<Anlage>> GetAnlagen(Page page) {
+    async Task<List<Anlage>> GetAnlagen(IPage page) {
         var anlagen = new List<Anlage>();
         var rows = await page.QuerySelectorAllAsync("#myform .netz-fieldset-inner .row");
         foreach (var row in rows) {
@@ -283,18 +284,18 @@ public class LinzNetz : IAsyncDisposable {
         return anlagen;
     }
 
-    async Task<string> GetTextValue(Page page, string selector) {
+    async Task<string> GetTextValue(IPage page, string selector) {
         var element = await page.QuerySelectorAsync(selector);
         var content = await element.GetPropertyAsync("innerHTML");
         var str = await content.JsonValueAsync<string>();
         return str;
     }
-    async Task<string> GetTextValueFromElement(ElementHandle elementHandle, string selector) {
+    async Task<string> GetTextValueFromElement(IElementHandle elementHandle, string selector) {
         var element = await elementHandle.QuerySelectorAsync(selector);
         return await GetTextValueFromElement2(element);
     }
 
-    async Task<string> GetTextValueFromElement2(ElementHandle elementHandle) {
+    async Task<string> GetTextValueFromElement2(IElementHandle elementHandle) {
         var content = await elementHandle.GetPropertyAsync("innerHTML");
         var str = await content.JsonValueAsync<string>();
         return str;
