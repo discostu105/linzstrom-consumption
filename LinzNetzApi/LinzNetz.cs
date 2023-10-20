@@ -158,7 +158,7 @@ public class LinzNetz : IAsyncDisposable {
             }
 
             // Link "Zur Verbrauchsdateninformation"
-            if (!await TryClickLink(page, options, "//a[contains(., 'Zur Verbrauchsdateninformation')]" )) {
+            if (!await TryClickLink(page, options, "//a[contains(., 'Meine Verbräuche anzeigen')]" )) {
                 throw new Exception("Could not find link");
             }
 
