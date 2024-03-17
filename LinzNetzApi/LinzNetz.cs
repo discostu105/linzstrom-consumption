@@ -149,19 +149,19 @@ public class LinzNetz : IAsyncDisposable {
         Console.WriteLine("go to Verbrauchsdateninformation");
         // go to Verbrauchsdateninformation:
         var options = new WaitForSelectorOptions() {
-            Timeout = (int)TimeSpan.FromSeconds(5).TotalMilliseconds
+            Timeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds
         };
         try {
             // Link "Verbrauchsdateninformation"
             if (!await TryClickLink(page, options, "//a[contains(., 'Verbrauchsdateninformation')]")) {
                 throw new Exception("Could not find link");
             }
-
+            Thread.Sleep(1000);// this increases success rate
             // Link "Zur Verbrauchsdateninformation"
-            if (!await TryClickLink(page, options, "//a[contains(., 'Meine Verbräuche anzeigen')]" )) {
+            if (!await TryClickLink(page, options, "//a[contains(., 'Meine Verbräuche anzeigen')]")) {
                 throw new Exception("Could not find link");
             }
-
+            Thread.Sleep(1000);// this increases success rate
             await page.WaitForSelectorAsync("h1");
         } catch (Exception e) {
             Console.WriteLine(e);
@@ -178,7 +178,7 @@ public class LinzNetz : IAsyncDisposable {
             await link.ClickAsync();
             return true;
         } catch (Exception e) {
-            Console.WriteLine($"Link with {xpath} not found");
+            Console.WriteLine($"Link with {xpath} not found: {e}");
             return false;
         }
     }
