@@ -72,7 +72,7 @@ class Program {
             Console.WriteLine("writing " + records.Count() + " csv records");
             Console.WriteLine("first: " + records.First());
             Console.WriteLine("last: " + records.Last());
-            await influxdb.WriteKwhQuarterHourMeasurements(records, anlage.name);
+            await influxdb.WriteKwhQuarterHourMeasurements(records, anlage.name, anlage.zaehlPunktNummer);
         }
     }
 }

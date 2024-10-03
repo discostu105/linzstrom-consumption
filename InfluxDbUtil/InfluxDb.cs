@@ -42,12 +42,13 @@ public class InfluxDb : IAsyncDisposable {
         }
     }
 
-    public async Task WriteKwhQuarterHourMeasurements(IEnumerable<KwhQuarterHourMeasurement> measurements, string location) {
+    public async Task WriteKwhQuarterHourMeasurements(IEnumerable<KwhQuarterHourMeasurement> measurements, string location, string zaehlpunkt) {
         using (var writeApi = client.GetWriteApi()) {
             foreach (var measurement in measurements) {
                 var point = PointData.Measurement("kwh_consumption")
                     .Tag("precision", "quarterhour")
                     .Tag("location", location)
+                    .Tag("zaehlpunkt", zaehlpunkt)
                     .Field("value", measurement.KWh)
                     .Timestamp(measurement.Timestamp_To.ToUniversalTime(), WritePrecision.S);
 

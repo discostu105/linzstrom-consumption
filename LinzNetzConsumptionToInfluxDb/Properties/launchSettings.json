@@ -2,7 +2,7 @@
   "profiles": {
     "LinzStromFetcher": {
       "commandName": "Project",
-      "commandLineArgs": "--days 30"
+      "commandLineArgs": "--days 180"
     },
     "Docker": {
       "commandName": "Docker"
