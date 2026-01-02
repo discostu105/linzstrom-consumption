@@ -22,6 +22,9 @@ public class Options {
     [Option('l', "location", Required = true, HelpText = "basisanlage oder waermepumpe")]
     public string Location { get; set; }
 
+    [Option('z', "zaehlpunkt", Required = true, HelpText = "Zählpunktnummer")]
+    public string Zaehlpunkt { get; set; }
+
 }
 
 class Program {
@@ -39,7 +42,7 @@ class Program {
         
         var csvParser = new CsvParser<KwhQuarterHourMeasurement>(csvParserOptions, new KwhQuarterHourMeasurementMapping());
         var records = csvParser.ReadFromFile(options.Inputfile, Encoding.UTF8).Select(x => x.Result);
-        await influxdb.WriteKwhQuarterHourMeasurements(records, options.Location);
+        await influxdb.WriteKwhQuarterHourMeasurements(records, options.Location, options.Zaehlpunkt);
     }
 
 }
