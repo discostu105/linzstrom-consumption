@@ -29,8 +29,7 @@ public class LinzNetz : IAsyncDisposable {
     }
 
     private async Task<IBrowser> SetupBrowser(bool headless) {
-        if (Environment.GetEnvironmentVariable("PUPPETEER_EXECUTABLE_PATH") != null) {
-            // in docker environment, browser needs to be present already
+        if (Environment.GetEnvironmentVariable("PUPPETEER_EXECUTABLE_PATH") == null) {
             // in non-docker environment, download the browser
             await new BrowserFetcher().DownloadAsync();
         }
