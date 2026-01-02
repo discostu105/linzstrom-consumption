@@ -1,7 +1,7 @@
 ﻿using CommandLine;
 using ConsumptionStorageInfluxDb;
+using DotNetEnv;
 using LinzNetzApi;
-using Microsoft.Extensions.Configuration;
 using System.Linq;
 using TinyCsvParser;
 
@@ -28,14 +28,17 @@ class Program {
 
         await Parser.Default.ParseArguments<Options>(args)
             .WithParsedAsync<Options>(async o => {
-                var configuration = new ConfigurationBuilder()
-                  .AddUserSecrets<Program>()
-                  .Build();
+                // Load .env file from current directory
+                var envPath = Path.Combine(Directory.GetCurrentDirectory(), ".env");
+                if (File.Exists(envPath)) {
+                    DotNetEnv.Env.Load(envPath);
+                }
 
-                if (o.Username == null) o.Username = configuration["LinzNetzUsername"];
-                if (o.Password == null) o.Password = configuration["LinzNetzPassword"];
-                if (o.InfluxDbEndpoint == null) o.InfluxDbEndpoint = configuration["InfluxDbEndpoint"];
-                if (o.InfluxDbToken == null) o.InfluxDbToken = configuration["InfluxDbToken"];
+                // Read from environment variables (fallback pattern maintained)
+                if (o.Username == null) o.Username = Environment.GetEnvironmentVariable("LinzNetzUsername");
+                if (o.Password == null) o.Password = Environment.GetEnvironmentVariable("LinzNetzPassword");
+                if (o.InfluxDbEndpoint == null) o.InfluxDbEndpoint = Environment.GetEnvironmentVariable("InfluxDbEndpoint");
+                if (o.InfluxDbToken == null) o.InfluxDbToken = Environment.GetEnvironmentVariable("InfluxDbToken");
 
                 await Parse(o);
             });
