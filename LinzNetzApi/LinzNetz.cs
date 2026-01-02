@@ -1,4 +1,4 @@
-﻿using PuppeteerSharp;
+using PuppeteerSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -58,10 +58,10 @@ public class LinzNetz : IAsyncDisposable {
         DirectoryInfo downloadDir = SetupDownloads();
         await EnableFileDownloads(page, downloadDir);
         await SelectAnlage(page, anlage);
-        await SelectQuarterHourResolution(page); await page.WaitForTimeoutAsync(200);
-        await SetFromDate(page, dateFrom); await page.WaitForTimeoutAsync(200);
-        await SetToDate(page, dateTo); await page.WaitForTimeoutAsync(200);
-        await LoadResults(page); await page.WaitForTimeoutAsync(200);
+        await SelectQuarterHourResolution(page); await Task.Delay(200);
+        await SetFromDate(page, dateFrom); await Task.Delay(200);
+        await SetToDate(page, dateTo); await Task.Delay(200);
+        await LoadResults(page); await Task.Delay(200);
         var csv = await ExportCsv(page, downloadDir);
         CleanupDownloads(downloadDir);
         return csv;
@@ -103,13 +103,13 @@ public class LinzNetz : IAsyncDisposable {
     private async Task SelectQuarterHourResolution(IPage page) {
         Console.WriteLine("Selecting Viertelstunden");
         await (await FindElementByText(page, "label", "Viertelstundenwerte")).ClickAsync();
-        await page.WaitForTimeoutAsync(500);
+        await Task.Delay(500);
     }
 
     private async Task SelectAnlage(IPage page, string anlage) {
         Console.WriteLine("Selecting anlage " + anlage);
         await page.ClickAsync($"label[for={anlage}]");
-        await page.WaitForTimeoutAsync(500);
+        await Task.Delay(500);
     }
     private async Task SetFromDate(IPage page, string date) {
         Console.WriteLine($"Setting fromdate to {date}");
