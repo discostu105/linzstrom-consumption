@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -47,6 +46,7 @@ public class LinzNetz : IAsyncDisposable {
         browser = await SetupBrowser(headless);
         page = await browser.NewPageAsync();
         page.DefaultTimeout = (int)timeout.TotalMilliseconds;
+        await page.SetViewportAsync(new ViewPortOptions { Width = 1280, Height = 900 });
         await page.SetJavaScriptEnabledAsync(true);
         await NavigateToLogin(page);
         await Login(username, password, page);
@@ -102,14 +102,19 @@ public class LinzNetz : IAsyncDisposable {
 
     private async Task SelectQuarterHourResolution(IPage page) {
         Console.WriteLine("Selecting Viertelstunden");
-        await (await FindElementByText(page, "label", "Viertelstundenwerte")).ClickAsync();
+        try {
+            await (await FindElementByText(page, "label", "Viertelstundenwerte")).ClickAsync();
+        } catch {
+            Console.WriteLine("Viertelstundenwerte not available for this anlage, using default resolution.");
+        }
         await Task.Delay(500);
     }
 
     private async Task SelectAnlage(IPage page, string anlage) {
         Console.WriteLine("Selecting anlage " + anlage);
         await page.ClickAsync($"label[for={anlage}]");
-        await Task.Delay(500);
+        // Wait for the form to update after the JSF AJAX postback triggered by selecting the anlage
+        await Task.Delay(2000);
     }
     private async Task SetFromDate(IPage page, string date) {
         Console.WriteLine($"Setting fromdate to {date}");
@@ -146,22 +151,24 @@ public class LinzNetz : IAsyncDisposable {
 
     private static async Task NavigateToConsumption(IPage page) {
         Console.WriteLine("go to Verbrauchsdateninformation");
-        // go to Verbrauchsdateninformation:
         var options = new WaitForSelectorOptions() {
             Timeout = (int)TimeSpan.FromSeconds(10).TotalMilliseconds
         };
         try {
+            // Dismiss cookie consent banner before navigation (may appear right after login)
+            await TryDismissCookieBanner(page);
+
             // Link "Verbrauchsdateninformation"
-            if (!await TryClickLink(page, options, "//a[contains(., 'Verbrauchsdateninformation')]")) {
-                throw new Exception("Could not find link");
+            if (!await TryClickLinkAndWaitForNavigation(page, options, "//a[contains(., 'Verbrauchsdateninformation')]")) {
+                throw new Exception("Could not find link 'Verbrauchsdateninformation'");
             }
-            Thread.Sleep(1000);// this increases success rate
-            // Link "Zur Verbrauchsdateninformation"
-            if (!await TryClickLink(page, options, "//a[contains(., 'Meine Verbräuche anzeigen')]")) {
-                throw new Exception("Could not find link");
+            // Dismiss cookie banner again in case it reappears on the new page
+            await TryDismissCookieBanner(page);
+            // Link "Meine Verbräuche anzeigen"
+            if (!await TryClickLinkAndWaitForNavigation(page, options, "//a[contains(., 'Meine Verbräuche anzeigen')]")) {
+                throw new Exception("Could not find link 'Meine Verbräuche anzeigen'");
             }
-            Thread.Sleep(1000);// this increases success rate
-            await page.WaitForSelectorAsync("h1");
+            await page.WaitForSelectorAsync("#myform");
         } catch (Exception e) {
             Console.WriteLine(e);
             Console.WriteLine(await page.GetContentAsync());
@@ -169,15 +176,31 @@ public class LinzNetz : IAsyncDisposable {
         }
     }
 
-    private static async Task<bool> TryClickLink(IPage page, WaitForSelectorOptions options, string xpath) {
+    private static async Task TryDismissCookieBanner(IPage page) {
         try {
-            Console.WriteLine($"Trying link with id {xpath}.");
+            var bannerOptions = new WaitForSelectorOptions { Timeout = 5000 };
+            var acceptBtn = await page.WaitForSelectorAsync("#accept-recommended-btn-handler", bannerOptions);
+            Console.WriteLine("Cookie banner found, dismissing.");
+            await acceptBtn.EvaluateFunctionAsync("el => el.click()");
+        } catch {
+            // No cookie banner present, continue
+        }
+    }
+
+    private static async Task<bool> TryClickLinkAndWaitForNavigation(IPage page, WaitForSelectorOptions options, string xpath) {
+        try {
+            Console.WriteLine($"Trying link: {xpath}");
             var link = await page.WaitForXPathAsync(xpath, options);
-            Console.WriteLine($"Link with id {xpath} successful.");
-            await link.ClickAsync();
+            Console.WriteLine($"Found link: {xpath}");
+            // Set up navigation wait BEFORE clicking to avoid race condition
+            var navigationTask = page.WaitForNavigationAsync(new NavigationOptions { Timeout = 30000 });
+            // Use JS click to bypass Puppeteer's visibility/HTMLElement check
+            await link.EvaluateFunctionAsync("el => el.click()");
+            await navigationTask;
+            Console.WriteLine($"Navigation complete after: {xpath}");
             return true;
         } catch (Exception e) {
-            Console.WriteLine($"Link with {xpath} not found: {e}");
+            Console.WriteLine($"Failed for {xpath}: {e.Message}");
             return false;
         }
     }
@@ -232,16 +255,9 @@ public class LinzNetz : IAsyncDisposable {
     }
 
     private async Task EnableFileDownloads(IPage page, DirectoryInfo downloadDir) {
-        var clientProp = page.GetType().GetTypeInfo().GetDeclaredProperty("Client");
-        var client = clientProp.GetValue(page) as CDPSession;
-        var m = client.GetType().GetTypeInfo().GetDeclaredMethods("SendAsync").ElementAt(1) as MethodInfo;
-        await (Task)m.Invoke(client, new object[]{
-            "Page.setDownloadBehavior",
-            new {
-                behavior = "allow",
-                downloadPath = downloadDir.FullName
-            },
-            false
+        await page.Client.SendAsync("Page.setDownloadBehavior", new {
+            behavior = "allow",
+            downloadPath = downloadDir.FullName
         });
     }
 

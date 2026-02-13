@@ -71,8 +71,9 @@ class Program {
             CsvReaderOptions csvReaderOptions = new CsvReaderOptions(new string[] { "\n" });
 
             var csvParser = new CsvParser<KwhQuarterHourMeasurement>(csvParserOptions, new KwhQuarterHourMeasurementMapping());
-            var records = csvParser.ReadFromString(csvReaderOptions, csv).Select(x => x.Result);
-            Console.WriteLine("writing " + records.Count() + " csv records");
+            var records = csvParser.ReadFromString(csvReaderOptions, csv).Where(x => x.IsValid).Select(x => x.Result).ToList();
+            Console.WriteLine("writing " + records.Count + " csv records");
+            if (records.Count == 0) { Console.WriteLine("No valid records, skipping anlage."); continue; }
             Console.WriteLine("first: " + records.First());
             Console.WriteLine("last: " + records.Last());
             await influxdb.WriteKwhQuarterHourMeasurements(records, anlage.name, anlage.zaehlPunktNummer);
