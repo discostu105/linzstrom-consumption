@@ -8,7 +8,7 @@ public class ExtractHtmlRunner {
     [Fact(Skip = "Manual execution only - run to extract fresh HTML samples")]
     public async Task ExtractHtmlSamples() {
         // Read credentials from user secrets or environment
-        var username = Environment.GetEnvironmentVariable("LINZNETZ_USERNAME") ?? "c.neumueller@gmail.com";
+        var username = Environment.GetEnvironmentVariable("LINZNETZ_USERNAME") ?? throw new Exception("Set LINZNETZ_USERNAME env var");
         var password = Environment.GetEnvironmentVariable("LINZNETZ_PASSWORD") ?? throw new Exception("Set LINZNETZ_PASSWORD env var");
 
         var outputDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "TestData");
